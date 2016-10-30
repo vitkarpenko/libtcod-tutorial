@@ -2,7 +2,22 @@ import libtcodpy as libtcod
 import random
 
 
-class Object():
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 40
+MAP_WIDTH = 80
+MAP_HEIGHT = 35
+color_dark_wall = libtcod.Color(170, 170, 170)
+
+
+class Tile:
+    def __init__(self, blocked, block_sight=None):
+        self.blocked = blocked
+
+        if block_sight is None: block_sight = blocked
+        self.block_sight = block_sight
+
+
+class Object:
     def __init__(self, x, y, char, color):
         self.x = x
         self.y = y
@@ -10,8 +25,9 @@ class Object():
         self.color = color
 
     def move(self, dx, dy):
-        self.x += dx
-        self.y += dy
+        if not map[self.x + dx][self.y + dy].blocked:
+            self.x += dx
+            self.y += dy
 
     def draw(self):
         libtcod.console_set_default_foreground(con, self.color)
@@ -19,6 +35,32 @@ class Object():
 
     def clear (self):
         libtcod.console_put_char(con, self.x, self.y, ' ', libtcod.BKGND_NONE)
+
+
+def make_map():
+    global map
+ 
+    map = [[ Tile(False)
+        for y in range(MAP_HEIGHT) ]
+            for x in range(MAP_WIDTH) ]
+    map[30][22].blocked = True
+    map[30][22].block_sight = True
+    map[50][22].blocked = True
+    map[50][22].block_sight = True
+
+
+
+def render_all():
+    for object in objects:
+        object.draw()
+    for y in range(MAP_HEIGHT):
+        for x in range(MAP_WIDTH):
+            wall = map[x][y].block_sight
+            if wall:
+                libtcod.console_put_char_ex(con, x, y, '#', color_dark_wall, libtcod.Color(20, 20, 20))
+            else:
+                libtcod.console_set_char_background(con, x, y, libtcod.Color(20, 20, 20), libtcod.BKGND_SET)
+    libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
 
 def handle_keys():
@@ -51,9 +93,9 @@ def handle_keys():
             player.move(1, 1)
 
 
-SCREEN_WIDTH = 80
-SCREEN_HEIGHT = 40
-LIMIT_FPS = 30
+def color_dark_ground():
+    color = random.randint(0, 22)
+    return libtcod.Color(color, color, color)
 
 
 libtcod.console_set_custom_font('dejavu16x16_gs_tc.png',
@@ -62,20 +104,14 @@ libtcod.console_set_custom_font('dejavu16x16_gs_tc.png',
 libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, 'libtcod_tutorial', False)
 con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-for x in range(SCREEN_WIDTH):
-    for y in range(SCREEN_HEIGHT):
-        color = random.randint(0, 22)
-        col = libtcod.Color(color, color, color)
-        libtcod.console_set_char_background(con, x, y, col, flag=libtcod.BKGND_SET)
-
 player = Object(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, '@', libtcod.Color(248, 238, 97))
 human = Object(SCREEN_WIDTH/2 - 5, SCREEN_HEIGHT/2, 'H', libtcod.Color(177, 194, 130))
 objects = [human, player]
 
+make_map()
+
 while not libtcod.console_is_window_closed():
-    for object in objects:
-        object.draw()
-    libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+    render_all()
     libtcod.console_flush()
     for object in objects:
         object.clear()
